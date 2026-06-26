@@ -1,0 +1,5 @@
+pandas>=2.0
+# Camada de IA (Dia 3) — descomente quando chegar la:
+# openai>=1.0          # ou anthropic / google-generativeai
+# streamlit>=1.30
+# python-dotenv>=1.0

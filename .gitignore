@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Banco gerado (reproduzivel via etl.py)
+data/warehouse.db
+data/warehouse.db-journal
+
+# Segredos (chave da API da IA - Dia 3)
+.env
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
