@@ -49,7 +49,8 @@ Anote o caminho completo do banco, ex: `C:\Projeto Desafio Capgemini\data\wareho
 1. Abra o **Power BI Desktop**.
 2. **Get Data** → procure **ODBC** → **Connect**.
 3. Em "Data Source Name (DSN)", escolha **SuperstoreDB** → **OK**.
-4. Se pedir credenciais, deixe em branco / **Default** → **Connect**.
+4. Se pedir credenciais: na aba **"Default or Custom"**, deixe em branco → **Connect**.
+   - **Se reclamar "nome de usuário não especificado"**: vá na aba **"Database"** e digite qualquer valor (ex: usuário `admin`, senha `admin`). O SQLite não tem autenticação e ignora isso — só serve pra satisfazer a tela. → **Connect**.
 5. No **Navigator**, marque estas tabelas e views:
    - `fact_sales`  ← tabela fato (obrigatória)
    - `dim_customer`
