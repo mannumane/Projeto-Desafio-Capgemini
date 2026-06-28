@@ -105,20 +105,39 @@ def perguntar(pergunta: str, historico: list[tuple[str, str]] | None = None,
     return texto, list(EXECUTION_LOG)
 
 
-def _gerar_com_retry(client, contents, config, tentativas: int = 4):
-    """Chama o modelo com retry em erros transitorios (503/sobrecarga).
-    Protege a demo de instabilidades momentaneas do servico."""
-    for i in range(tentativas):
-        try:
-            return client.models.generate_content(model=MODEL, contents=contents, config=config)
-        except Exception as e:
-            msg = str(e)
-            transitorio = ("503" in msg or "UNAVAILABLE" in msg
-                           or "overloaded" in msg.lower() or "high demand" in msg.lower())
-            if transitorio and i < tentativas - 1:
-                time.sleep(2 * (i + 1))   # espera crescente: 2s, 4s, 6s
-                continue
-            raise
+def _eh_transitorio(msg: str) -> bool:
+    m = msg.lower()
+    return ("503" in msg or "unavailable" in m or "overloaded" in m
+            or "high demand" in m or "500" in msg or "internal" in m)
+
+
+def _gerar_com_retry(client, contents, config, tentativas: int = 3):
+    """Resiliencia para a demo:
+    1. Tenta o modelo principal, com retry em erros transitorios (503/sobrecarga).
+    2. Se persistir a sobrecarga, cai para um modelo de fallback (flash-lite),
+       que usa outra capacidade.
+    3. Se tudo falhar, levanta erro com mensagem amigavel."""
+    modelos = [MODEL]
+    if "flash-lite" not in MODEL:
+        modelos.append("gemini-2.5-flash-lite")
+
+    for modelo in modelos:
+        for i in range(tentativas):
+            try:
+                return client.models.generate_content(
+                    model=modelo, contents=contents, config=config)
+            except Exception as e:
+                if _eh_transitorio(str(e)):
+                    if i < tentativas - 1:
+                        time.sleep(1.5 * (i + 1))   # espera: 1.5s, 3s
+                        continue
+                    break          # esgotou neste modelo -> tenta o proximo
+                raise              # erro nao transitorio: propaga
+
+    raise RuntimeError(
+        "A Ana está com instabilidade momentânea no provedor de IA "
+        "(modelo sobrecarregado). Tente enviar a pergunta novamente em alguns segundos."
+    )
 
 
 if __name__ == "__main__":
