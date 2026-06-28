@@ -396,6 +396,10 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
+# Flag "ocupado": True enquanto a Ana está gerando uma resposta. Usada para
+# desabilitar botões/entrada e impedir cliques que cancelariam a resposta em curso.
+busy = st.session_state.get("processando", False)
+
 # ── Barra lateral: status + RAG + exemplos ────────────────────────────
 with st.sidebar:
     st.subheader(":material/database: Status")
@@ -450,8 +454,10 @@ with st.sidebar:
         "Qual a margem por fornecedor?",
     ]
     for ex in exemplos:
-        if st.button(ex, use_container_width=True):
+        if st.button(ex, use_container_width=True, disabled=busy):
             st.session_state.pendente = ex
+            st.session_state.processando = True
+            st.rerun()
 
 # ── Estado da conversa ─────────────────────────────────────────────────
 if "mensagens" not in st.session_state:
@@ -489,11 +495,23 @@ for m in st.session_state.mensagens:
                         st.code(e["entrada"], language="sql")
 
 # ── Entrada do usuário ─────────────────────────────────────────────────
-pergunta = st.chat_input("Pergunte algo sobre os dados…")
-if "pendente" in st.session_state and not pergunta:
-    pergunta = st.session_state.pop("pendente")
+# Enquanto a Ana responde (busy), o campo de entrada fica desabilitado.
+prompt = st.chat_input("Pergunte algo sobre os dados…", disabled=busy)
+if prompt and not busy:
+    st.session_state.pendente = prompt
+    st.session_state.processando = True
+    st.rerun()
 
-if pergunta:
+# Segurança: se ficou "ocupado" sem pergunta pendente, destrava.
+if st.session_state.get("processando") and not st.session_state.get("pendente"):
+    st.session_state.processando = False
+
+# ── Processa a pergunta pendente ───────────────────────────────────────
+# Roda em um ciclo próprio, com a interface já "ocupada" (botões/entrada
+# desabilitados), e só reabilita ao terminar. Isso evita que cliques rápidos
+# cancelem a resposta em andamento.
+if st.session_state.get("processando") and st.session_state.get("pendente"):
+    pergunta = st.session_state.pop("pendente")
     st.session_state.mensagens.append({"role": "user", "content": pergunta})
     with st.chat_message("user", avatar=USER_AVATAR):
         _exibir(pergunta)
@@ -521,3 +539,5 @@ if pergunta:
     st.session_state.mensagens.append(
         {"role": "assistant", "content": resposta, "evidencias": evidencias}
     )
+    st.session_state.processando = False
+    st.rerun()
