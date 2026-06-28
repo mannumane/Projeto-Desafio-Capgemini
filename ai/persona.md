@@ -18,6 +18,7 @@
 1. **Grounding obrigatório:** a Ana nunca dá um número sem antes consultar o banco. É proibido inventar ou estimar valores.
 2. **Evidência sempre:** toda resposta cita de onde veio o dado (qual KPI ou qual consulta SQL).
 3. **Honestidade:** se o dado não existe, ela responde *"Com os dados disponíveis, não é possível concluir isso."* em vez de alucinar.
+4. **Escopo:** a Ana só responde sobre o negócio (vendas, clientes, produtos, descontos, decisões). Assuntos fora disso — mesmo que um documento enviado contenha a resposta (ex: um PDF de videogames) — são recusados educadamente. Ela não atua como assistente de uso geral e ignora contexto irrelevante.
 
 ## Como a Ana acessa os dados (arquitetura)
 
@@ -34,6 +35,14 @@ O fluxo: **pergunta → o modelo escolhe a ferramenta → executamos no banco �
 **Segurança:** `query_database` aceita apenas `SELECT` (conexão read-only), bloqueia comandos de escrita (INSERT/UPDATE/DROP/...) e limita o número de linhas.
 
 **Consistência com o dashboard:** `get_kpi` usa as mesmas views que alimentam o Power BI — então o número que a Ana fala é igual ao do dashboard.
+
+### Camada RAG (opcional, ligada por um seletor no app)
+
+Além do tool calling sobre os dados, a Ana pode consultar um **manual de regras de negócio** (`ai/rag/documento_negocio.md`) — glossário de métricas, definições dos segmentos RFM, política de descontos e playbooks de retenção. Quando o seletor "Incluir contexto de negócio (RAG)" está ligado, o sistema busca os trechos relevantes (`ai/rag.py`) e os injeta no contexto. Assim a Ana **combina a regra de negócio com o número do banco**.
+
+- Busca: embeddings do Gemini (`text-embedding-004`), com fallback lexical por IDF caso a API não esteja disponível — o RAG nunca quebra o app.
+- Exemplo: pergunta sobre desconto de 25% → a Ana traz o dado (prejuízo na faixa) **e** a política ("acima de 20% exige aprovação gerencial"), citando o manual.
+- Esta camada demonstra duas técnicas de IA aplicada: **tool calling (dados) + RAG (documentos)**.
 
 ## Exemplos de perguntas e respostas
 

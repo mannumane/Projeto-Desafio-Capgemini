@@ -12,6 +12,7 @@ Variaveis de ambiente (arquivo .env):
 """
 
 import os
+import time
 
 try:
     from dotenv import load_dotenv
@@ -26,11 +27,15 @@ from google.genai import types
 try:
     from .tools import TOOLS, EXECUTION_LOG
     from .persona import SYSTEM_PROMPT
+    from . import rag
 except ImportError:  # rodando como script solto
     from tools import TOOLS, EXECUTION_LOG
     from persona import SYSTEM_PROMPT
+    import rag
 
-MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
+# gemini-2.5-flash-lite: free tier com 1.000 req/dia (vs apenas 20 do flash).
+# Otimo para tool calling + RAG e sem custo. Troque via GEMINI_MODEL no .env.
+MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash-lite")
 
 
 def _client() -> genai.Client:
@@ -43,12 +48,15 @@ def _client() -> genai.Client:
     return genai.Client(api_key=key)
 
 
-def perguntar(pergunta: str, historico: list[tuple[str, str]] | None = None):
+def perguntar(pergunta: str, historico: list[tuple[str, str]] | None = None,
+              usar_rag: bool = False, base_rag=None):
     """Envia a pergunta para a Ana e retorna (resposta, evidencias).
 
     Args:
         pergunta: texto do usuario.
         historico: lista opcional de (role, texto) com role em {"user","model"}.
+        usar_rag: se True, consulta o documento de regras de negocio (RAG) e
+                  injeta os trechos relevantes como contexto extra.
 
     Returns:
         (resposta_texto, lista_de_evidencias)
@@ -57,8 +65,30 @@ def perguntar(pergunta: str, historico: list[tuple[str, str]] | None = None):
     EXECUTION_LOG.clear()
     client = _client()
 
+    system = SYSTEM_PROMPT
+    if usar_rag:
+        base = base_rag if base_rag is not None else rag.base()
+        trechos = base.buscar(pergunta, k=3)
+        if trechos:
+            contexto = "\n\n".join(f"## {t['titulo']}\n{t['texto']}" for t in trechos)
+            system += (
+                "\n\n# Contexto de negocio (documento da empresa)\n"
+                "Os trechos abaixo vem de um documento enviado. Use-os APENAS se tiverem "
+                "relacao com a analise de vendas/negocio (definicoes, politicas, playbooks). "
+                "Se o conteudo NAO tiver relacao com o negocio (ex: videogames, esportes), "
+                "IGNORE-o completamente e nao responda sobre esse assunto — siga focada nos "
+                "dados. Quando usar algo relevante, cite como 'documento de regras de negocio' "
+                "e combine com os numeros do banco. Nao invente regras alem do que esta escrito.\n\n"
+                + contexto
+            )
+            EXECUTION_LOG.append({
+                "ferramenta": f"rag ({base.origem})",
+                "entrada": pergunta,
+                "resumo": "trechos: " + ", ".join(t["titulo"] for t in trechos),
+            })
+
     config = types.GenerateContentConfig(
-        system_instruction=SYSTEM_PROMPT,
+        system_instruction=system,
         tools=TOOLS,            # function calling automatico
         temperature=0.2,        # baixa = respostas mais factuais
     )
@@ -68,8 +98,27 @@ def perguntar(pergunta: str, historico: list[tuple[str, str]] | None = None):
         contents.append(types.Content(role=role, parts=[types.Part(text=texto)]))
     contents.append(types.Content(role="user", parts=[types.Part(text=pergunta)]))
 
-    resp = client.models.generate_content(model=MODEL, contents=contents, config=config)
-    return (resp.text or "").strip(), list(EXECUTION_LOG)
+    resp = _gerar_com_retry(client, contents, config)
+    texto = (resp.text or "").strip()
+    # Garantia de formatacao: remove crases (que renderizam como texto verde/codigo)
+    texto = texto.replace("`", "")
+    return texto, list(EXECUTION_LOG)
+
+
+def _gerar_com_retry(client, contents, config, tentativas: int = 4):
+    """Chama o modelo com retry em erros transitorios (503/sobrecarga).
+    Protege a demo de instabilidades momentaneas do servico."""
+    for i in range(tentativas):
+        try:
+            return client.models.generate_content(model=MODEL, contents=contents, config=config)
+        except Exception as e:
+            msg = str(e)
+            transitorio = ("503" in msg or "UNAVAILABLE" in msg
+                           or "overloaded" in msg.lower() or "high demand" in msg.lower())
+            if transitorio and i < tentativas - 1:
+                time.sleep(2 * (i + 1))   # espera crescente: 2s, 4s, 6s
+                continue
+            raise
 
 
 if __name__ == "__main__":

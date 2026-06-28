@@ -55,7 +55,12 @@ O princípio central é uma **fonte única de verdade**: um banco SQLite que ali
 ├── data/warehouse.db       # banco gerado (não versionado; rode etl.py)
 ├── sql/                    # (queries auxiliares)
 ├── dashboard/              # dashboard.pbix (Power BI)
-├── ai/                     # camada de IA (persona, tools, agente)
+├── ai/                     # camada de IA
+│   ├── persona.py/.md      # persona "Ana" + system prompt
+│   ├── tools.py            # ferramentas (SQL) que tocam o banco
+│   ├── agent.py            # agente Gemini (tool calling + RAG)
+│   ├── rag.py              # busca no documento de negócio
+│   └── rag/documento_negocio.md  # base de conhecimento (regras de negócio)
 ├── app/                    # interface (Streamlit)
 └── docs/                   # guias e documentação
     ├── guia_powerbi.md
@@ -87,6 +92,8 @@ python etl/etl.py
   - `query_database(sql)` — executa um `SELECT` (somente leitura) e retorna as linhas reais.
   - `get_kpi(nome)` — atalho para as mesmas views de KPI que alimentam o Power BI (garante consistência).
 - **Fluxo:** pergunta → o modelo escolhe a ferramenta → executamos no banco → a IA responde citando o resultado.
+- **RAG (camada extra, opcional):** além do tool calling sobre os dados, há um RAG sobre um **manual de regras de negócio** (`ai/rag/documento_negocio.md`) — glossário de métricas, definições de RFM, política de descontos e playbooks. No app, um seletor liga/desliga esse contexto: quando ligado, a Ana busca os trechos relevantes (`ai/rag.py`, embeddings Gemini com fallback lexical) e combina regra de negócio + número do banco. Mostra duas técnicas: **tool calling + RAG**.
+- **Upload de documento (RAG dinâmico):** o usuário pode subir o próprio documento de regras (`.md`, `.txt` ou `.pdf`) pelo app; a Ana passa a usá-lo como base de conhecimento. Sem upload, usa o manual padrão. Isso torna a solução reutilizável: conecte seus dados, suba suas regras, e a IA analisa.
 - **Regra crítica de evidência:** o system prompt (`ai/persona.py`) obriga a IA a consultar o banco antes de responder. Toda resposta traz afirmação + número + fonte. Se o dado não existe, responde *"Com os dados disponíveis, não é possível concluir isso."*
 - **Segurança:** `query_database` aceita apenas `SELECT` (conexão read-only), bloqueia comandos de escrita e limita o número de linhas.
 - **Interface:** `app/streamlit_app.py` — chat com a Ana e um painel "Ver evidência" que mostra o SQL executado em cada resposta.
