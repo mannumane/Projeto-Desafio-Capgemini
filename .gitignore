@@ -4,8 +4,9 @@ __pycache__/
 .venv/
 venv/
 
-# Banco gerado (reproduzivel via etl.py)
-data/warehouse.db
+# Banco: VERSIONADO de propósito (Streamlit Cloud monta o repo como somente-leitura,
+# então o app lê este arquivo em vez de gerá-lo no boot). Localmente, `python etl/etl.py`
+# recria/atualiza este mesmo arquivo.
 data/warehouse.db-journal
 
 # Segredos (chave da API da IA - Dia 3)

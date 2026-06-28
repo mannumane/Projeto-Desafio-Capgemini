@@ -53,11 +53,21 @@ st.set_page_config(
     layout="wide",
 )
 
-# Deploy: se o banco nao existir (ex: primeira execucao na nuvem), gera a partir do CSV
+# Banco: normalmente vem versionado no repo. Se faltar (ex: rodando local sem ETL),
+# tenta gerar a partir do CSV — protegido para nao derrubar o app em ambiente
+# somente-leitura (Streamlit Cloud).
 if not DB_PATH.exists():
-    with st.spinner("Preparando o banco de dados pela primeira vez…"):
-        import runpy
-        runpy.run_path(str(ROOT / "etl" / "etl.py"), run_name="__main__")
+    try:
+        with st.spinner("Preparando o banco de dados pela primeira vez…"):
+            import runpy
+            runpy.run_path(str(ROOT / "etl" / "etl.py"), run_name="__main__")
+    except Exception:
+        st.error(
+            "Banco de dados não encontrado e não foi possível gerá-lo neste ambiente. "
+            "Garanta que `data/warehouse.db` está versionado no repositório "
+            "(rode `python etl/etl.py` localmente e faça commit do arquivo)."
+        )
+        st.stop()
 
 # ── CSS customizado ────────────────────────────────────────────────────
 st.markdown("""
