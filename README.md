@@ -4,6 +4,12 @@ Solução de análise de dados de vendas (varejo) com uma camada de IA capaz de 
 
 > Projeto desenvolvido como case de consultoria em Data & AI.
 
+## 🚀 Aplicação publicada
+
+**Converse com a Ana (app web):** https://projeto-desafio-capgemini.streamlit.app
+
+> Obs.: o app está hospedado no Streamlit Community Cloud (tier gratuito). Se ele estiver hibernando por inatividade, clique em **"Yes, get this app back up!"** e aguarde alguns segundos até ele acordar.
+
 ---
 
 ## 1. Problema abordado
