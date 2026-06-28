@@ -97,6 +97,13 @@ python etl/etl.py
 - **Regra crítica de evidência:** o system prompt (`ai/persona.py`) obriga a IA a consultar o banco antes de responder. Toda resposta traz afirmação + número + fonte. Se o dado não existe, responde *"Com os dados disponíveis, não é possível concluir isso."*
 - **Segurança:** `query_database` aceita apenas `SELECT` (conexão read-only), bloqueia comandos de escrita e limita o número de linhas.
 - **Interface:** `app/streamlit_app.py` — chat com a Ana e um painel "Ver evidência" que mostra o SQL executado em cada resposta.
+- **Canal no Telegram (diferencial):** `app/telegram_bot.py` — a mesma Ana num bot de Telegram. Mostra que o núcleo é **desacoplado do canal**: tanto o app web quanto o Telegram são cascas finas que chamam a mesma função `perguntar()`. Setup do bot:
+  ```bash
+  # 1. No Telegram, fale com @BotFather -> /newbot -> copie o token
+  # 2. Coloque no .env:  TELEGRAM_BOT_TOKEN=seu_token
+  pip install -r requirements.txt
+  python app/telegram_bot.py
+  ```
 - **Exemplos reais de perguntas e respostas:** `docs/exemplos_perguntas.md`.
 
 ### Como rodar a IA
