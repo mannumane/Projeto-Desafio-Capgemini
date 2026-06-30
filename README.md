@@ -4,11 +4,13 @@ Solução de análise de dados de vendas (varejo) com uma camada de IA capaz de 
 
 > Projeto desenvolvido como case de consultoria em Data & AI.
 
-## 🚀 Aplicação publicada
+## 🚀 Acesso à solução
 
-**Converse com a Ana (app web):** https://projeto-desafio-capgemini.streamlit.app
+- **App web — converse com a Ana:** https://projeto-desafio-capgemini.streamlit.app
+- **Dashboard Power BI (publicado):** https://app.powerbi.com/view?r=eyJrIjoiZTVjNjdkNmQtNWUwYi00Y2ZjLTkzMDUtMWJjYTJhNDkyZjQyIiwidCI6IjBmZTQ4ZWY3LTc3M2QtNDJkNy1iY2Y4LWJhYzNmOGNkMDc4NCJ9
+- **Telegram:** a mesma Ana também roda como bot de Telegram, demonstrando que o núcleo de IA é desacoplado do canal. Como o bot roda localmente (polling), veja a seção 6 para iniciá-lo (`python app/telegram_bot.py`).
 
-> Obs.: o app está hospedado no Streamlit Community Cloud (tier gratuito). Se ele estiver hibernando por inatividade, clique em **"Yes, get this app back up!"** e aguarde alguns segundos até ele acordar.
+> Obs.: o app web está no Streamlit Community Cloud (tier gratuito). Se estiver hibernando por inatividade, clique em **"Yes, get this app back up!"** e aguarde alguns segundos até ele acordar.
 
 ---
 
@@ -126,9 +128,6 @@ Receita total · Lucro total · Margem % · Ticket médio · Nº de pedidos/clie
 
 **Destaques do dataset:** receita de ~US$ 2,30M, margem de 12,5%; os clientes "Campeões" (RFM) são ~24% da base e geram ~40% da receita; descontos acima de 20% levam a prejuízo médio por venda.
 
-## 8. Limitações
+## 8. Próximos passos
 
-- A base não contém **custo de produto** (só preço e lucro registrado), então não é possível calcular margem de contribuição por insumo.
-- Dataset histórico (2014–2017) e de um único mercado (EUA) — não reflete tempo real.
-- A IA responde sobre os dados disponíveis no banco; perguntas fora desse escopo são respondidas com "não é possível concluir".
-- Solução em SQLite, voltada ao desafio — não dimensionada para produção/alta escala.
+- **Migrar do SQLite para o PostgreSQL.** O SQLite foi escolhido pela simplicidade do desafio; em um cenário de produção, o PostgreSQL traria mais robustez e permitiria usar **DirectQuery** no Power BI. A arquitetura já é desacoplada, então a troca exige mudar apenas a camada de conexão.

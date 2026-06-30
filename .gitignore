@@ -15,3 +15,7 @@ data/warehouse.db-journal
 # Sistema operacional
 .DS_Store
 Thumbs.db
+
+# Config local do Claude Code e documento pessoal de entrega (não vão para o repo público)
+.claude/
+Entrega_Capgemini_Emannuel.pdf
